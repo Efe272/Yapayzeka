@@ -1,0 +1,70 @@
+<div>Teachable Machine Image Model</div> 
+<button type="button" onclick="init()">Start</button> 
+<div id="webcam-container"></div> 
+<div id="label-container"></div>
+
+<!-- Resimleri ekleyin, başlangıçta gizli -->
+<img id="rock" src="rock.png" style="display:none; width:100px;" />
+<img id="paper" src="papers.png" style="display:none; width:100px;" />
+<img id="scissors" src="makas.png" style="display:none; width:100px;" />
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script> 
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script> 
+<script type="text/javascript"> 
+const URL = "https://teachablemachine.withgoogle.com/models/_WkrU_ZKR/";
+
+let model, webcam, labelContainer, maxPredictions;
+
+async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    const flip = true; 
+    webcam = new tmImage.Webcam(200, 200, flip); 
+    await webcam.setup(); 
+    await webcam.play();
+    window.requestAnimationFrame(loop);
+
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
+    labelContainer = document.getElementById("label-container");
+    for (let i = 0; i < maxPredictions; i++) { 
+        labelContainer.appendChild(document.createElement("div"));
+    }
+}
+
+async function loop() {
+    webcam.update(); 
+    await predict();
+    window.requestAnimationFrame(loop);
+}
+
+async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+    
+    let rockProbability = 0;
+    let paperProbability = 0;
+    let scissorsProbability = 0;
+
+    for (let i = 0; i < maxPredictions; i++) {
+        const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+        labelContainer.childNodes[i].innerHTML = classPrediction;
+
+        // Tahmin oranlarını kontrol et
+        if (prediction[i].className === "Taş") {
+            rockProbability = prediction[i].probability;
+        } else if (prediction[i].className === "Kağıt") {
+            paperProbability = prediction[i].probability;
+        } else if (prediction[i].className === "Makas") {
+            scissorsProbability = prediction[i].probability;
+        }
+    }
+
+    // Resimleri göster veya gizle
+    document.getElementById("rock").style.display = rockProbability > 0.7 ? "block" : "none";
+    document.getElementById("paper").style.display = paperProbability > 0.7 ? "block" : "none";
+    document.getElementById("scissors").style.display = scissorsProbability > 0.7 ? "block" : "none";
+}
+</script>
